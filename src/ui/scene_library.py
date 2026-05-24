@@ -9,6 +9,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
 
+from ..i18n.translations import tr
+
 
 class SceneLibraryDialog(QDialog):
     """In-app scene library — save/load/rename/delete scenes.
@@ -20,7 +22,7 @@ class SceneLibraryDialog(QDialog):
 
     def __init__(self, get_channels_fn, get_names_fn, get_locks_fn=None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("场景库")
+        self.setWindowTitle(tr("scene_library_title"))
         self.setMinimumSize(360, 420)
         self._get_channels = get_channels_fn   # callable returning list[512]
         self._get_names = get_names_fn         # callable returning dict
@@ -42,7 +44,7 @@ class SceneLibraryDialog(QDialog):
     def _init_ui(self):
         layout = QVBoxLayout(self)
 
-        title = QLabel("场景库")
+        title = QLabel(tr("scene_library_heading"))
         title.setFont(QFont("", 13, QFont.Bold))
         layout.addWidget(title)
 
@@ -53,22 +55,22 @@ class SceneLibraryDialog(QDialog):
 
         # Buttons
         btn_row = QHBoxLayout()
-        btn_save = QPushButton("保存当前场景")
+        btn_save = QPushButton(tr("btn_save_current"))
         btn_save.clicked.connect(self._save_current)
-        btn_load = QPushButton("加载")
+        btn_load = QPushButton(tr("btn_load"))
         btn_load.clicked.connect(self._load_selected)
         btn_row.addWidget(btn_save)
         btn_row.addWidget(btn_load)
 
         btn_row2 = QHBoxLayout()
-        btn_rename = QPushButton("重命名")
+        btn_rename = QPushButton(tr("btn_rename"))
         btn_rename.clicked.connect(self._rename_selected)
-        btn_del = QPushButton("删除")
+        btn_del = QPushButton(tr("btn_delete"))
         btn_del.clicked.connect(self._delete_selected)
         btn_row2.addWidget(btn_rename)
         btn_row2.addWidget(btn_del)
 
-        btn_close = QPushButton("关闭")
+        btn_close = QPushButton(tr("btn_close"))
         btn_close.clicked.connect(self.accept)
 
         layout.addLayout(btn_row)
@@ -88,7 +90,7 @@ class SceneLibraryDialog(QDialog):
             self._scenes = data.get("scenes", [])
             self._refresh_list()
         except Exception as e:
-            QMessageBox.warning(self, "读取失败", f"无法加载场景库:\n{e}")
+            QMessageBox.warning(self, tr("load_failed_title"), tr("load_failed_text", error=str(e)))
 
     def _save_to_disk(self):
         try:
@@ -96,7 +98,7 @@ class SceneLibraryDialog(QDialog):
             with open(self._file_path, "w", encoding="utf-8") as f:
                 json.dump({"scenes": self._scenes}, f, indent=2, ensure_ascii=False)
         except Exception as e:
-            QMessageBox.warning(self, "保存失败", f"无法保存场景库:\n{e}")
+            QMessageBox.warning(self, tr("save_failed_title"), tr("save_failed_text", error=str(e)))
 
     def _refresh_list(self):
         self.list_widget.clear()
@@ -110,7 +112,7 @@ class SceneLibraryDialog(QDialog):
     # ----------------------------------------------------------------
     def _save_current(self):
         name, ok = QInputDialog.getText(
-            self, "保存场景", "场景名称:", text=""
+            self, tr("save_scene_dialog"), tr("scene_name_label"), text=""
         )
         if not ok or not name.strip():
             return
@@ -119,8 +121,8 @@ class SceneLibraryDialog(QDialog):
         for s in self._scenes:
             if s["name"] == name:
                 ret = QMessageBox.question(
-                    self, "已存在",
-                    f"场景「{name}」已存在，是否覆盖？",
+                    self, tr("scene_exists_title"),
+                    tr("scene_exists_text", name=name),
                     QMessageBox.Yes | QMessageBox.No,
                 )
                 if ret != QMessageBox.Yes:
@@ -150,7 +152,7 @@ class SceneLibraryDialog(QDialog):
             return
         scene = self._scenes[idx]
         if len(scene.get("channels", [])) != 512:
-            QMessageBox.warning(self, "数据错误", "场景通道数据不完整")
+            QMessageBox.warning(self, tr("data_error_title"), tr("scene_data_incomplete"))
             return
         self.scene_loaded.emit(
             scene["channels"],
@@ -167,7 +169,7 @@ class SceneLibraryDialog(QDialog):
             return
         old_name = self._scenes[idx]["name"]
         name, ok = QInputDialog.getText(
-            self, "重命名", "新名称:", text=old_name
+            self, tr("rename_dialog_title"), tr("rename_dialog_label"), text=old_name
         )
         if ok and name.strip():
             self._scenes[idx]["name"] = name.strip()
@@ -182,8 +184,8 @@ class SceneLibraryDialog(QDialog):
         if idx is None or idx >= len(self._scenes):
             return
         ret = QMessageBox.question(
-            self, "确认删除",
-            f"确定删除场景「{self._scenes[idx]['name']}」吗？",
+            self, tr("confirm_delete_title"),
+            tr("confirm_delete_text", name=self._scenes[idx]["name"]),
             QMessageBox.Yes | QMessageBox.No,
         )
         if ret == QMessageBox.Yes:

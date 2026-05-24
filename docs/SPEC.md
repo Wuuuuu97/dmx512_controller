@@ -37,7 +37,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  MenuBar: 文件(&F) | 串口(&S) | 预设(&P) | 视图(&V) | 帮助(&H)   │
+│  MenuBar: 文件(&F) | 串口(&S) | 预设(&P) | 场景(&C) | 视图(&V) | 语言(&L) | 帮助(&H)   │
 ├──────────┬──────────────────────────────────────────────────────┤
 │          │               第 1 / 32 页 (通道 1–16)                │
 │  01  02  │  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐               │
@@ -71,14 +71,16 @@
 ### Menu Bar Design
 
 ```
-文件(&F)          串口(&S)         预设(&P)         视图(&V)         帮助(&H)
-├─ 新建场景 Ctrl+N ├─ 刷新端口 F5  ├─ 全部归零 Ctrl+R├─ ✓ 显示状态栏 ├─ 关于 DMX512
-├─ ─────────────── ├─ ──────────── ├─ 全部最大(255) │              ├─ 使用说明
-├─ 打开场景 Ctrl+O ├─ 断开连接     ├─ 全部取反      │              ├─ ──────────
-├─ 保存场景 Ctrl+S │              ├─ ──────────── │              ├─ 关于
-├─ 另存为 Ctrl+Sh+S│              │               │
-├─ ─────────────── │              │               │
-└─ 退出 Alt+F4     │              │               │
+文件(&F)          串口(&S)         预设(&P)         场景(&C)         视图(&V)         语言(&L)         帮助(&H)
+├─ 新建场景 Ctrl+N ├─ 刷新端口 F5  ├─ 全部归零 Ctrl+R├─ 场景库 Ctrl+L  ├─ ✓ 显示状态栏 ├─ 中文 ✓       ├─ 关于 DMX512
+├─ ─────────────── ├─ ──────────── ├─ 全部最大(255) ├─ 场景轮巡       │              ├─ English      ├─ 使用说明
+├─ 打开场景 Ctrl+O ├─ 断开连接     ├─ 全部取反      │               │              │              ├─ ──────────
+├─ 保存场景 Ctrl+S │              ├─ ──────────── │               │              │              ├─ 关于
+├─ 另存为 Ctrl+Sh+S│              │               │               │              │
+├─ ─────────────── │              │               │               │              │
+├─ 重启 Ctrl+Sh+R  │              │               │               │              │
+├─ ─────────────── │              │               │               │              │
+└─ 退出 Alt+F4     │              │               │               │              │
 ```
 
 ### Data Flow
@@ -98,13 +100,18 @@ UI Slider Change → update_channel(ch, val) → DMX Transmitter reads
 - **current_page**: `int` 0–31 — 当前显示页面
 - **running**: `bool` — 发送线程状态标志
 - **current_file_path**: `str|None` — 当前场景文件路径（用于保存覆盖）
+- **_channel_names**: `dict[int, str]` — 通道自定义名称映射
+- **_channel_locks**: `set[int]` — 锁定通道索引集合
+- **_current_language**: `"zh"|"en"` — 当前语言（LanguageManager 维护）
 
 ### Scene File Format (JSON)
 ```json
 {
     "name": "My Scene",
     "channels": [0, 128, 255, 0, ...],
-    "count": 512
+    "count": 512,
+    "names": {"0": "面光 1", "1": "面光 2", "100": "LED 染色"},
+    "locked": [5, 6, 7]
 }
 ```
 
@@ -118,20 +125,35 @@ UI Slider Change → update_channel(ch, val) → DMX Transmitter reads
 
 ```
 D:/work/dmx512_controller/
-├── SPEC.md                  # 规格说明
+├── main.py                  # 程序入口（i18n 初始化、窗口启动）
+├── build.py                 # PyInstaller 单文件打包脚本
+├── build_icon.py            # 图标生成脚本
 ├── requirements.txt         # 依赖清单
-├── main.py                  # 程序入口
+├── icon.ico                 # 程序图标
+├── README.md                # 双语 README（中英对照）
+├── LICENSE                  # MIT 许可
+├── docs/
+│   ├── CLAUDE.md            # 英文项目概览（给 AI 用的）
+│   └── SPEC.md              # 规格说明书（中文）
 └── src/
     ├── __init__.py
     ├── dmx/
     │   ├── __init__.py
-    │   └── transmitter.py   # DMX512 协议发送线程
+    │   └── transmitter.py   # DMX512 协议发送线程（QThread）
+    ├── engine/
+    │   ├── __init__.py
+    │   └── chaser.py        # 场景轮巡引擎（QThread + 淡入淡出）
+    ├── i18n/
+    │   ├── __init__.py
+    │   └── translations.py  # LanguageManager 单例、tr()、TRANSLATIONS 中英字典
     └── ui/
         ├── __init__.py
-        ├── main_window.py   # 主窗口（菜单栏+左侧面板+右侧通道+状态栏）
-        ├── channel_widget.py # 单通道控件（物理推杆风格滑块+标签）
-        ├── page_widget.py   # 页面控件（2×8网格）
-        └── serial_panel.py  # 串口控制面板（未使用，保留）
+        ├── main_window.py   # 主窗口（菜单栏+左侧面板+通道区+状态栏+i18n 重新翻译）
+        ├── page_widget.py   # 页面控件（2×8 网格）
+        ├── channel_widget.py# 单通道控件（滑块+标签+选中/锁定/重命名）
+        ├── serial_panel.py  # 串口控制面板（未使用，保留）
+        ├── scene_library.py # 场景库对话框（保存/加载/重命名/删除）
+        └── chaser_panel.py  # 场景轮巡面板（勾选场景、停留/淡入时间）
 ```
 
 ## DMX512 Protocol Detail
@@ -339,13 +361,13 @@ class SceneItem:
     names: dict[int, str] | None = None  # 可选通道名称
 ```
 
-**存储文件**：`{app_dir}/scenes/scenes.json`（用户可配置路径）
+**存储文件**：`scenes/scenes.json`（打包后在同级 `scenes/` 目录下）
 
 ```json
 {
     "scenes": [
-        {"name": "开场白光", "channels": [255, 255, 255, 0, ...]},
-        {"name": "蓝色氛围", "channels": [0, 0, 128, 0, ...]}
+        {"name": "开场白光", "channels": [255, 255, 255, 0, ...], "names": {}, "locked": []},
+        {"name": "蓝色氛围", "channels": [0, 0, 128, 0, ...], "names": {}, "locked": []}
     ]
 }
 ```
@@ -409,6 +431,89 @@ if self._blackout:
     frame = bytes([0x00]) + bytes(512)  # 全部 0
 else:
     frame = bytes([0x00]) + scaled_data
+```
+
+---
+
+# 国际化 (i18n)
+
+## FR-40: 中英文语言切换
+
+UI 界面支持中文/英文动态切换，切换后所有文字立即更新，无需重启。
+
+### Acceptance Criteria
+- [x] 菜单栏添加"语言(&L)"菜单，包含"中文"和"English"两个选项，互斥勾选
+- [x] 切换语言后所有菜单、按钮、标签、状态栏、对话框文字立即切换
+- [x] 已打开的场景库/场景轮巡等对话框立即生效（重启后按新语言显示）
+- [x] 语言偏好保存到 `scenes/settings.json`，下次启动自动恢复
+- [x] 快捷键：Ctrl+Shift+Z 切换中文，Ctrl+Shift+E 切换英文
+- [x] 英文下使用说明、关于 DMX512、快捷键等完整内容均为英文
+- [x] 翻译缺失时自动降级：英文 → 中文 → 显示 key（永不崩溃）
+
+### Technical Design
+
+**架构**：Python dict-based，无外部依赖。
+
+```
+src/i18n/
+├── __init__.py
+└── translations.py    # LanguageManager (QObject) + tr() + TRANSLATIONS
+```
+
+**核心机制**：
+- `LanguageManager` 单例，继承 `QObject`，发射 `language_changed` 信号
+- 各窗口连接该信号，在槽函数中重新设置所有文字
+- `tr(key, **kwargs)` 全局函数，支持 `str.format()` 参数替换
+
+**翻译字典**（~70 keys × 2 languages）：
+```python
+TRANSLATIONS = {
+    "zh": { "window_title": "DMX 调试助手", "btn_start": "▶ Start", ... },
+    "en": { "window_title": "DMX Debug Assistant", "btn_start": "▶ Start", ... },
+}
+```
+
+**重新翻译策略**：
+
+| UI 类型 | 重新翻译方式 |
+|---------|------------|
+| 主窗口持久控件 | `language_changed` → `_retranslate_ui()` 逐个 setText |
+| 菜单栏 | 同一方法重新设置 setTitle/setText |
+| 模态对话框 | 构造时读取 `tr()`，关闭后下次重建 |
+| 右键菜单 | 每次 `contextMenuEvent()` 重建，自动用当前语言 |
+
+**持久化**：
+```json
+// scenes/settings.json
+{ "language": "en" }
+```
+
+路径解析：frozen 时为 `sys.executable` 同级 `scenes/settings.json`，源码运行时为项目根 `scenes/settings.json`。
+
+---
+
+## FR-41: 软件重启
+
+File → 重启软件 (Ctrl+Shift+R)
+
+### Acceptance Criteria
+- [x] 菜单栏文件菜单添加"重启软件"选项
+- [x] 点击后弹出确认对话框
+- [x] 确认后先停止 DMX 发送、释放串口
+- [x] 使用 QProcess.startDetached 启动新进程后关闭当前窗口
+
+### Technical Design
+```python
+def _restart_application(self):
+    self._stop_transmission()
+    QApplication.processEvents()  # 确保串口资源完全释放
+    if getattr(sys, "frozen", False):
+        args = [sys.executable]
+    else:
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        args = [sys.executable, os.path.join(root, "main.py")]
+    QProcess.startDetached(args[0], args[1:])
+    self.close()
 ```
 
 ---

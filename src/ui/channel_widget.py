@@ -5,6 +5,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent
 from PyQt5.QtGui import QFont, QCursor
 
+from ..i18n.translations import tr
+
 
 class ChannelWidget(QWidget):
     """Single DMX channel control: label + slider + value + double-click input.
@@ -88,14 +90,14 @@ class ChannelWidget(QWidget):
 
     def contextMenuEvent(self, event):
         menu = QMenu(self)
-        act_rename = menu.addAction("重命名")
+        act_rename = menu.addAction(tr("context_rename"))
         menu.addSeparator()
-        act_lock = menu.addAction("解锁" if self._locked else "锁定")
-        act_reset = menu.addAction("归零")
+        act_lock = menu.addAction(tr("context_unlock") if self._locked else tr("context_lock"))
+        act_reset = menu.addAction(tr("context_reset"))
         menu.addSeparator()
         # Show current name in context for confirmation
         current = self._custom_name or f"CH{self.channel_index + 1:03d}"
-        act_info = menu.addAction(f"通道: {current}")
+        act_info = menu.addAction(tr("context_channel_info", name=current))
         act_info.setEnabled(False)
 
         action = menu.exec_(QCursor.pos())
@@ -265,8 +267,8 @@ class ChannelWidget(QWidget):
         name = self._custom_name or f"CH{self.channel_index + 1:03d}"
         value, ok = QInputDialog.getInt(
             self,
-            f"通道 {name}",
-            "输入数值 (0-255):",
+            tr("input_channel_title", name=name),
+            tr("input_channel_label"),
             self.slider.value(),
             0,
             255,

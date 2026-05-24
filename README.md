@@ -17,7 +17,7 @@
     <a href="#quick-start">Quick Start</a> •
     <a href="#hardware">Hardware</a> •
     <a href="#download">Download</a> •
-    <a href="docs/README.md">Full Guide</a>
+    <a href="docs/CLAUDE.md">Full Guide</a>
   </p>
 
   <img src="docs/ui_preview.png" width="700" alt="UI Preview" />
@@ -39,6 +39,7 @@
 | **Scene Chaser** — Select scenes, set interval/fade, auto loop | **场景轮巡** — 勾选场景，设停留/淡入时间，自动循环切换 |
 | **Presets** — Reset all / Max all / Invert all, skip locked channels | **预设操作** — 全部归零 / 最大 / 取反，跳过锁定通道 |
 | **FPS Monitor** — Real-time frame rate in status bar | **帧率显示** — 状态栏实时 FPS |
+| **Language Switch** — Chinese/English toggle, Ctrl+Shift+Z/E, persists on restart | **中英双语** — 一键切换，Ctrl+Shift+Z/E，重启保持 | 
 | **Auto Port Scan** — Detect available serial ports, one-click refresh | **串口自动扫描** — 自动检测可用串口，一键刷新 |
 
 ## Quick Start / 快速开始
@@ -85,7 +86,7 @@ USB 转 RS-485 模块          DMX512 设备
 | UI | PyQt5 |
 | DMX Protocol | QThread + pyserial (250000 baud, 8N2) |
 | Frame Timing | `time.perf_counter()` spin-wait (μs precision) |
-| Packaging | PyInstaller → single-file exe |
+| Packaging | PyInstaller → single-file exe (`python build.py`) |
 
 ## Documentation / 文档
 

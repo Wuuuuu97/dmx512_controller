@@ -17,6 +17,7 @@ from .page_widget import PageWidget
 from .scene_library import SceneLibraryDialog
 from .chaser_panel import ChaserDialog
 from ..dmx.transmitter import DMXTransmitter
+from ..i18n.translations import tr, set_language, get_manager as _lang_mgr
 
 
 class MainWindow(QMainWindow):
@@ -63,11 +64,13 @@ class MainWindow(QMainWindow):
         self._connect_signals()
         self._update_page_display()
 
+        _lang_mgr().language_changed.connect(self._retranslate_ui)
+
     # ----------------------------------------------------------------
     # UI setup
     # ----------------------------------------------------------------
     def _init_ui(self):
-        self.setWindowTitle("DMX 调试助手")
+        self.setWindowTitle(tr("window_title"))
         self.setMinimumSize(860, 520)
         self.setWindowIcon(self._make_icon())
 
@@ -95,13 +98,13 @@ class MainWindow(QMainWindow):
         left_layout.setSpacing(2)
 
         # Title
-        title = QLabel("页数")
-        title.setAlignment(Qt.AlignCenter)
-        title.setStyleSheet(
+        self.page_title_label = QLabel(tr("page_title"))
+        self.page_title_label.setAlignment(Qt.AlignCenter)
+        self.page_title_label.setStyleSheet(
             "font-weight: bold; font-size: 13px; color: #333; "
             "border: none; padding-bottom: 6px;"
         )
-        left_layout.addWidget(title)
+        left_layout.addWidget(self.page_title_label)
 
         # 32 page buttons in 4×8 grid
         page_grid = QGridLayout()
@@ -140,19 +143,19 @@ class MainWindow(QMainWindow):
         left_layout.addSpacing(4)
 
         # Port selection
-        port_label = QLabel("串口")
-        port_label.setAlignment(Qt.AlignCenter)
-        port_label.setStyleSheet(
+        self.port_label = QLabel(tr("port_label"))
+        self.port_label.setAlignment(Qt.AlignCenter)
+        self.port_label.setStyleSheet(
             "font-size: 11px; color: #666; font-weight: bold; border: none;"
         )
-        left_layout.addWidget(port_label)
+        left_layout.addWidget(self.port_label)
 
         self.combo_port = QComboBox()
         self.combo_port.setMinimumWidth(100)
         self.combo_port.setStyleSheet("font-size: 11px; padding: 2px 4px;")
         self.btn_refresh_port = QPushButton("↻")
         self.btn_refresh_port.setFixedSize(26, 24)
-        self.btn_refresh_port.setToolTip("刷新串口列表")
+        self.btn_refresh_port.setToolTip(tr("refresh_port_tooltip"))
         self.btn_refresh_port.setStyleSheet("font-size: 13px;")
 
         port_row = QHBoxLayout()
@@ -171,16 +174,16 @@ class MainWindow(QMainWindow):
         left_layout.addSpacing(4)
 
         # ---- Control buttons ----
-        self.btn_start = QPushButton("▶ Start")
+        self.btn_start = QPushButton(tr("btn_start"))
         self.btn_start.setStyleSheet(
             "QPushButton { color: #1a7a1a; font-weight: bold; padding: 6px; }"
         )
-        self.btn_stop = QPushButton("■ Stop")
+        self.btn_stop = QPushButton(tr("btn_stop"))
         self.btn_stop.setEnabled(False)
         self.btn_stop.setStyleSheet(
             "QPushButton { color: #c00; font-weight: bold; padding: 6px; }"
         )
-        self.btn_blackout = QPushButton("黑场")
+        self.btn_blackout = QPushButton(tr("btn_blackout"))
         self.btn_blackout.setCheckable(True)
         self.btn_blackout.setStyleSheet("""
             QPushButton {
@@ -194,7 +197,7 @@ class MainWindow(QMainWindow):
             }
         """)
 
-        self.btn_reset = QPushButton("全部归零")
+        self.btn_reset = QPushButton(tr("btn_reset"))
         self.btn_reset.setStyleSheet("QPushButton { padding: 6px; }")
 
         left_layout.addWidget(self.btn_start)
@@ -213,15 +216,15 @@ class MainWindow(QMainWindow):
         left_layout.addSpacing(2)
 
         master_header = QHBoxLayout()
-        master_label = QLabel("主控")
-        master_label.setStyleSheet(
+        self.master_label = QLabel(tr("master_label"))
+        self.master_label.setStyleSheet(
             "font-size: 11px; color: #666; font-weight: bold; border: none;"
         )
         self.master_value_label = QLabel("100%")
         self.master_value_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         self.master_value_label.setFixedWidth(36)
         self.master_value_label.setStyleSheet("font-size: 10px; color: #333;")
-        master_header.addWidget(master_label)
+        master_header.addWidget(self.master_label)
         master_header.addStretch()
         master_header.addWidget(self.master_value_label)
         left_layout.addLayout(master_header)
@@ -286,7 +289,7 @@ class MainWindow(QMainWindow):
         status.addWidget(self.led)
         spacer = QLabel("  ")
         status.addWidget(spacer)
-        self.status_label = QLabel("就绪 — 未连接")
+        self.status_label = QLabel(tr("status_ready"))
         self.status_label.setStyleSheet("color: #888;")
         status.addWidget(self.status_label, 1)
         self.fps_label = QLabel("")
@@ -304,105 +307,121 @@ class MainWindow(QMainWindow):
         menubar = self.menuBar()
 
         # ---- 文件 ----
-        menu_file = menubar.addMenu("文件(&F)")
-        act_new = QAction("新建场景(&N)", self)
-        act_new.setShortcut("Ctrl+N")
-        act_new.triggered.connect(self._new_scene)
-        menu_file.addAction(act_new)
+        self.menu_file = menubar.addMenu(tr("menu_file"))
+        self.act_new_scene = QAction(tr("act_new_scene"), self)
+        self.act_new_scene.setShortcut("Ctrl+N")
+        self.act_new_scene.triggered.connect(self._new_scene)
+        self.menu_file.addAction(self.act_new_scene)
 
-        menu_file.addSeparator()
+        self.menu_file.addSeparator()
 
-        act_open = QAction("打开场景(&O)...", self)
-        act_open.setShortcut("Ctrl+O")
-        act_open.triggered.connect(self._open_scene)
-        menu_file.addAction(act_open)
+        self.act_open_scene = QAction(tr("act_open_scene"), self)
+        self.act_open_scene.setShortcut("Ctrl+O")
+        self.act_open_scene.triggered.connect(self._open_scene)
+        self.menu_file.addAction(self.act_open_scene)
 
-        act_save = QAction("保存场景(&S)", self)
-        act_save.setShortcut("Ctrl+S")
-        act_save.triggered.connect(self._save_scene)
-        menu_file.addAction(act_save)
+        self.act_save_scene = QAction(tr("act_save_scene"), self)
+        self.act_save_scene.setShortcut("Ctrl+S")
+        self.act_save_scene.triggered.connect(self._save_scene)
+        self.menu_file.addAction(self.act_save_scene)
 
-        act_save_as = QAction("另存为(&A)...", self)
-        act_save_as.setShortcut("Ctrl+Shift+S")
-        act_save_as.triggered.connect(self._save_scene_as)
-        menu_file.addAction(act_save_as)
+        self.act_save_as = QAction(tr("act_save_as"), self)
+        self.act_save_as.setShortcut("Ctrl+Shift+S")
+        self.act_save_as.triggered.connect(self._save_scene_as)
+        self.menu_file.addAction(self.act_save_as)
 
-        menu_file.addSeparator()
+        self.menu_file.addSeparator()
 
-        act_restart = QAction("重启软件(&R)", self)
-        act_restart.setShortcut("Ctrl+Shift+R")
-        act_restart.triggered.connect(self._restart_application)
-        menu_file.addAction(act_restart)
+        self.act_restart = QAction(tr("act_restart"), self)
+        self.act_restart.setShortcut("Ctrl+Shift+R")
+        self.act_restart.triggered.connect(self._restart_application)
+        self.menu_file.addAction(self.act_restart)
 
-        menu_file.addSeparator()
-        act_exit = QAction("退出(&X)", self)
-        act_exit.setShortcut("Alt+F4")
-        act_exit.triggered.connect(self.close)
-        menu_file.addAction(act_exit)
+        self.menu_file.addSeparator()
+        self.act_exit = QAction(tr("act_exit"), self)
+        self.act_exit.setShortcut("Alt+F4")
+        self.act_exit.triggered.connect(self.close)
+        self.menu_file.addAction(self.act_exit)
 
         # ---- 串口 ----
-        menu_serial = menubar.addMenu("串口(&S)")
-        act_refresh = QAction("刷新端口(&R)", self)
-        act_refresh.setShortcut("F5")
-        act_refresh.triggered.connect(self._refresh_ports)
-        menu_serial.addAction(act_refresh)
+        self.menu_serial = menubar.addMenu(tr("menu_serial"))
+        self.act_refresh_port = QAction(tr("act_refresh_port"), self)
+        self.act_refresh_port.setShortcut("F5")
+        self.act_refresh_port.triggered.connect(self._refresh_ports)
+        self.menu_serial.addAction(self.act_refresh_port)
 
-        menu_serial.addSeparator()
-        act_disconnect = QAction("断开连接(&D)", self)
-        act_disconnect.triggered.connect(self._stop_transmission)
-        menu_serial.addAction(act_disconnect)
+        self.menu_serial.addSeparator()
+        self.act_disconnect = QAction(tr("act_disconnect"), self)
+        self.act_disconnect.triggered.connect(self._stop_transmission)
+        self.menu_serial.addAction(self.act_disconnect)
 
         # ---- 预设 ----
-        menu_preset = menubar.addMenu("预设(&P)")
-        act_reset = QAction("全部归零", self)
-        act_reset.setShortcut("Ctrl+R")
-        act_reset.triggered.connect(self._reset_all_channels)
-        menu_preset.addAction(act_reset)
+        self.menu_preset = menubar.addMenu(tr("menu_preset"))
+        self.act_reset_all = QAction(tr("act_reset_all"), self)
+        self.act_reset_all.setShortcut("Ctrl+R")
+        self.act_reset_all.triggered.connect(self._reset_all_channels)
+        self.menu_preset.addAction(self.act_reset_all)
 
-        act_max = QAction("全部最大 (255)", self)
-        act_max.triggered.connect(self._set_all_max)
-        menu_preset.addAction(act_max)
+        self.act_set_all_max = QAction(tr("act_set_all_max"), self)
+        self.act_set_all_max.triggered.connect(self._set_all_max)
+        self.menu_preset.addAction(self.act_set_all_max)
 
-        act_invert = QAction("全部取反", self)
-        act_invert.triggered.connect(self._invert_all)
-        menu_preset.addAction(act_invert)
+        self.act_invert_all = QAction(tr("act_invert_all"), self)
+        self.act_invert_all.triggered.connect(self._invert_all)
+        self.menu_preset.addAction(self.act_invert_all)
 
         # ---- 场景 ----
-        menu_scene = menubar.addMenu("场景(&C)")
-        act_library = QAction("场景库(&L)", self)
-        act_library.setShortcut("Ctrl+L")
-        act_library.triggered.connect(self._open_scene_library)
-        menu_scene.addAction(act_library)
+        self.menu_scene = menubar.addMenu(tr("menu_scene"))
+        self.act_scene_library = QAction(tr("act_scene_library"), self)
+        self.act_scene_library.setShortcut("Ctrl+L")
+        self.act_scene_library.triggered.connect(self._open_scene_library)
+        self.menu_scene.addAction(self.act_scene_library)
 
-        menu_scene.addSeparator()
-        act_chaser = QAction("场景轮巡(&H)", self)
-        act_chaser.triggered.connect(self._open_chaser)
-        menu_scene.addAction(act_chaser)
+        self.menu_scene.addSeparator()
+        self.act_chaser = QAction(tr("act_chaser"), self)
+        self.act_chaser.triggered.connect(self._open_chaser)
+        self.menu_scene.addAction(self.act_chaser)
 
         # ---- 视图 ----
-        menu_view = menubar.addMenu("视图(&V)")
-        self.act_show_status = QAction("显示状态栏", self)
-        self.act_show_status.setCheckable(True)
-        self.act_show_status.setChecked(True)
-        self.act_show_status.triggered.connect(
+        self.menu_view = menubar.addMenu(tr("menu_view"))
+        self.act_show_statusbar = QAction(tr("act_show_statusbar"), self)
+        self.act_show_statusbar.setCheckable(True)
+        self.act_show_statusbar.setChecked(True)
+        self.act_show_statusbar.triggered.connect(
             lambda checked: self.statusBar().setVisible(checked)
         )
-        menu_view.addAction(self.act_show_status)
+        self.menu_view.addAction(self.act_show_statusbar)
+
+        # ---- 语言 ----
+        self.menu_language = menubar.addMenu(tr("menu_language"))
+        self.act_lang_zh = QAction(tr("lang_chinese"), self)
+        self.act_lang_zh.setCheckable(True)
+        self.act_lang_zh.setChecked(_lang_mgr().current_language == "zh")
+        self.act_lang_zh.setShortcut("Ctrl+Shift+Z")
+        self.act_lang_zh.triggered.connect(lambda: set_language("zh"))
+        self.menu_language.addAction(self.act_lang_zh)
+
+        self.act_lang_en = QAction(tr("lang_english"), self)
+        self.act_lang_en.setCheckable(True)
+        self.act_lang_en.setChecked(_lang_mgr().current_language == "en")
+        self.act_lang_en.setShortcut("Ctrl+Shift+E")
+        self.act_lang_en.triggered.connect(lambda: set_language("en"))
+        self.menu_language.addAction(self.act_lang_en)
 
         # ---- 帮助 ----
-        menu_help = menubar.addMenu("帮助(&H)")
-        act_dmx_info = QAction("关于 DMX512", self)
-        act_dmx_info.triggered.connect(self._show_dmx_info)
-        menu_help.addAction(act_dmx_info)
+        self.menu_help = menubar.addMenu(tr("menu_help"))
+        self.act_about_dmx = QAction(tr("act_about_dmx"), self)
+        self.act_about_dmx.triggered.connect(self._show_dmx_info)
+        self.menu_help.addAction(self.act_about_dmx)
 
-        act_usage = QAction("使用说明", self)
-        act_usage.triggered.connect(self._show_usage)
-        menu_help.addAction(act_usage)
+        self.act_usage = QAction(tr("act_usage"), self)
+        self.act_usage.triggered.connect(self._show_usage)
+        self.menu_help.addAction(self.act_usage)
 
-        menu_help.addSeparator()
-        act_about = QAction("关于(&A)", self)
-        act_about.triggered.connect(self._show_about)
-        menu_help.addAction(act_about)
+        self.menu_help.addSeparator()
+        self.act_about = QAction(tr("act_about"), self)
+        self.act_about.triggered.connect(self._show_about)
+        self.menu_help.addAction(self.act_about)
 
     # ----------------------------------------------------------------
     # Signal wiring
@@ -429,8 +448,10 @@ class MainWindow(QMainWindow):
     def _update_page_display(self):
         self.stack.setCurrentIndex(self._current_page)
         self.page_label.setText(
-            f"第 {self._current_page + 1} / 32 页    "
-            f"(通道 {self._current_page * 16 + 1}–{(self._current_page + 1) * 16})"
+            tr("page_label",
+               current=self._current_page + 1,
+               start=self._current_page * 16 + 1,
+               end=(self._current_page + 1) * 16)
         )
         for i, btn in enumerate(self.page_buttons):
             btn.setChecked(i == self._current_page)
@@ -466,8 +487,8 @@ class MainWindow(QMainWindow):
         current = self._channel_names.get(channel, "")
         name, ok = QInputDialog.getText(
             self,
-            f"重命名通道 CH{channel + 1:03d}",
-            "输入通道名称 (留空恢复默认):",
+            tr("rename_channel_title", channel=f"CH{channel + 1:03d}"),
+            tr("rename_channel_label"),
             text=current,
         )
         if not ok:
@@ -498,7 +519,7 @@ class MainWindow(QMainWindow):
 
     def _on_blackout_toggled(self, checked):
         self.transmitter.set_blackout(checked)
-        self.status_label.setText("黑场" if checked else "已停止")
+        self.status_label.setText(tr("status_blackout") if checked else tr("status_stopped"))
         self.status_label.setStyleSheet(
             "color: red; font-weight: bold;" if checked else "color: #888;"
         )
@@ -530,7 +551,7 @@ class MainWindow(QMainWindow):
             for p in sorted(ports):
                 self.combo_port.addItem(f"{p.device} - {p.description}", p.device)
         else:
-            self.combo_port.addItem("无可用串口", None)
+            self.combo_port.addItem(tr("no_ports_available"), None)
 
     def _current_port(self):
         return self.combo_port.currentData()
@@ -538,7 +559,7 @@ class MainWindow(QMainWindow):
     def _start_transmission(self):
         port = self._current_port()
         if not port:
-            QMessageBox.warning(self, "串口错误", "请先选择串口")
+            QMessageBox.warning(self, tr("serial_error_title"), tr("select_port_first"))
             return
 
         # Deactivate blackout when starting fresh
@@ -560,22 +581,17 @@ class MainWindow(QMainWindow):
             self.transmitter.start()
             self._set_controls_enabled(False)
             self._set_led(True)
-            self.status_label.setText(f"发送中 — {port}")
+            self.status_label.setText(tr("status_sending", port=port))
             self.status_label.setStyleSheet("color: green; font-weight: bold;")
         except serial.SerialException as e:
             QMessageBox.critical(
-                self, "串口错误",
-                f"无法打开串口:\n{e}\n\n"
-                "可能的原因:\n"
-                "• 串口已被其他程序占用\n"
-                "• 设备未连接或驱动未安装\n"
-                "• 权限不足",
+                self, tr("serial_error_title"),
+                tr("cannot_open_port", error=str(e)),
             )
         except OSError as e:
             QMessageBox.critical(
-                self, "系统错误",
-                f"无法访问串口:\n{e}\n\n"
-                "请检查设备连接后重试。",
+                self, tr("system_error_title"),
+                tr("cannot_access_port", error=str(e)),
             )
 
     def _stop_transmission(self):
@@ -589,7 +605,7 @@ class MainWindow(QMainWindow):
         self._set_controls_enabled(True)
         self._set_led(False)
         if not self.btn_blackout.isChecked():
-            self.status_label.setText("已停止")
+            self.status_label.setText(tr("status_stopped"))
             self.status_label.setStyleSheet("color: #888;")
         self.fps_label.setText("")
 
@@ -604,7 +620,7 @@ class MainWindow(QMainWindow):
     # ----------------------------------------------------------------
     def _reset_all_channels(self):
         if QMessageBox.question(
-            self, "确认", "确定将所有通道归零吗？\n(锁定通道不受影响)",
+            self, tr("confirm_title"), tr("confirm_reset_all"),
             QMessageBox.Yes | QMessageBox.No,
         ) == QMessageBox.Yes:
             for i in range(512):
@@ -614,7 +630,7 @@ class MainWindow(QMainWindow):
 
     def _set_all_max(self):
         if QMessageBox.question(
-            self, "确认", "确定将所有通道设为 255 吗？\n(锁定通道不受影响)",
+            self, tr("confirm_title"), tr("confirm_set_all_max"),
             QMessageBox.Yes | QMessageBox.No,
         ) == QMessageBox.Yes:
             for i in range(512):
@@ -645,8 +661,7 @@ class MainWindow(QMainWindow):
     # ----------------------------------------------------------------
     def _new_scene(self):
         if QMessageBox.question(
-            self, "新建场景",
-            "确定要新建场景吗？\n当前所有通道数据将被清除。",
+            self, tr("confirm_new_scene_title"), tr("confirm_new_scene"),
             QMessageBox.Yes | QMessageBox.No,
         ) == QMessageBox.Yes:
             self._channel_names.clear()
@@ -654,13 +669,13 @@ class MainWindow(QMainWindow):
             self.transmitter.reset_all()
             self._refresh_all_pages()
             self._current_file_path = None
-            self.status_label.setText("已新建场景")
+            self.status_label.setText(tr("status_new_scene"))
             self.status_label.setStyleSheet("color: #333;")
 
     def _open_scene(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "打开场景", "",
-            "DMX Scene (*.dmx *.json);;All Files (*)",
+            self, tr("dialog_open_scene"), "",
+            tr("scene_file_filter"),
         )
         if not path:
             return
@@ -669,7 +684,7 @@ class MainWindow(QMainWindow):
                 data = json.load(f)
             channels = data.get("channels", [])
             if len(channels) != 512:
-                QMessageBox.warning(self, "格式错误", "通道数据不完整 (需要 512 个值)")
+                QMessageBox.warning(self, tr("format_error_title"), tr("channel_data_incomplete"))
                 return
             self.transmitter.set_all_channels(channels)
             # Restore names
@@ -680,10 +695,10 @@ class MainWindow(QMainWindow):
             self._channel_locks = set(data.get("locked", []))
             self._refresh_all_pages()
             self._current_file_path = path
-            self.status_label.setText(f"已加载: {os.path.basename(path)}")
+            self.status_label.setText(tr("status_loaded", name=os.path.basename(path)))
             self.status_label.setStyleSheet("color: #333;")
         except Exception as e:
-            QMessageBox.critical(self, "加载失败", str(e))
+            QMessageBox.critical(self, tr("load_failed_title"), str(e))
 
     def _save_scene(self):
         if self._current_file_path:
@@ -693,8 +708,8 @@ class MainWindow(QMainWindow):
 
     def _save_scene_as(self):
         path, _ = QFileDialog.getSaveFileName(
-            self, "保存场景", "untitled.dmx",
-            "DMX Scene (*.dmx *.json);;All Files (*)",
+            self, tr("dialog_save_scene"), tr("dialog_default_filename"),
+            tr("scene_file_filter"),
         )
         if path:
             self._save_to_file(path)
@@ -711,10 +726,10 @@ class MainWindow(QMainWindow):
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             self._current_file_path = path
-            self.status_label.setText(f"已保存: {os.path.basename(path)}")
+            self.status_label.setText(tr("status_saved", name=os.path.basename(path)))
             self.status_label.setStyleSheet("color: #333;")
         except Exception as e:
-            QMessageBox.critical(self, "保存失败", str(e))
+            QMessageBox.critical(self, tr("save_failed_title"), str(e))
 
     # ----------------------------------------------------------------
     # Scene library
@@ -738,7 +753,7 @@ class MainWindow(QMainWindow):
         self._channel_locks = set(locked)
         self._refresh_all_pages()
         self._current_file_path = None
-        self.status_label.setText("已加载场景库场景")
+        self.status_label.setText(tr("status_scene_library_loaded"))
         self.status_label.setStyleSheet("color: #333;")
 
     # ----------------------------------------------------------------
@@ -785,76 +800,17 @@ class MainWindow(QMainWindow):
     # ----------------------------------------------------------------
     def _show_dmx_info(self):
         QMessageBox.information(
-            self, "关于 DMX512",
-            "DMX512 是数字多路复用协议，用于舞台灯光控制。\n\n"
-            "• 512 个通道，每通道 0-255\n"
-            "• 波特率: 250,000 bps\n"
-            "• 8 数据位, 2 停止位, 无校验\n"
-            "• 帧率: ~36 Hz\n"
-            "• 物理层: RS-485",
+            self, tr("dmx_info_title"), tr("dmx_info_text"),
         )
 
     def _show_usage(self):
         QMessageBox.information(
-            self, "使用说明",
-            "── 基本操作 ──\n"
-            "1. 连接 USB 转 RS-485 模块到电脑\n"
-            "2. 在左侧「串口」下拉选择端口，点击 ↻ 刷新\n"
-            "3. 点击「Start」开始发送 DMX 信号\n"
-            "4. 点击「Stop」停止发送\n\n"
-            "── 通道控制 ──\n"
-            "• 拖动滑块 (0-255) 调节通道值\n"
-            "• 双击数值弹出输入框，直接键入\n"
-            "• 右键通道 → 重命名 / 锁定 / 归零\n"
-            "• 锁定通道的滑块禁用，批量操作自动跳过\n\n"
-            "── 编组操作 ──\n"
-            "• 点击通道编号选中（蓝色高亮）\n"
-            "• Ctrl+点击多选\n"
-            "• 选中多个通道后，拖动任一滑块，所有选中同步变化\n\n"
-            "── 页面切换 ──\n"
-            "• 左侧 4×8 网格按钮快速跳转\n"
-            "• 当前页高亮显示\n\n"
-            "── 主控推子 ──\n"
-            "• 左侧底部「主控」滑块全局缩放所有通道输出 (0-100%)\n"
-            "• 不影响原始存储值，仅实时缩放发送帧\n\n"
-            "── 黑场 ──\n"
-            "• 点击「黑场」按钮一键输出全零\n"
-            "• 再次点击恢复正常\n"
-            "• 黑场时 LED 保持发送状态\n\n"
-            "── 预设 (菜单栏「预设」) ──\n"
-            "• 全部归零 (Ctrl+R) — 所有通道归零\n"
-            "• 全部最大 — 所有通道设 255\n"
-            "• 全部取反 — 值翻转 (0↔255)\n"
-            "• 锁定通道不受预设操作影响\n\n"
-            "── 场景文件 (菜单栏「文件」) ──\n"
-            "• Ctrl+S 保存 / Ctrl+Shift+S 另存为\n"
-            "• Ctrl+O 打开 / Ctrl+N 新建\n"
-            "• 场景文件包含通道值、名称、锁定状态\n\n"
-            "── 场景库 (Ctrl+L) ──\n"
-            "• 在应用内保存/加载/删除/重命名多个场景\n"
-            "• 数据存储于 scenes/scenes.json\n\n"
-            "── 场景轮巡 (菜单栏「场景」) ──\n"
-            "• 勾选场景库中的场景参与轮巡\n"
-            "• 设置停留时间和淡入时长\n"
-            "• 轮巡期间自动按序切换，支持线性淡入淡出\n\n"
-            "── 快捷键 ──\n"
-            "Ctrl+N  新建场景\n"
-            "Ctrl+O  打开场景文件\n"
-            "Ctrl+S  保存场景\n"
-            "Ctrl+Shift+S  另存为\n"
-            "Ctrl+R  全部归零\n"
-            "Ctrl+L  打开场景库\n"
-            "F5      刷新串口列表\n"
-            "Alt+F4  退出程序",
+            self, tr("usage_title"), tr("usage_text"),
         )
 
     def _show_about(self):
         QMessageBox.about(
-            self, "关于 DMX 调试助手",
-            "DMX 调试助手 v1.0\n\n"
-            "基于 Python + PyQt5 的 DMX512 灯光控制工具。\n"
-            "通过 USB 转串口模块输出 DMX512 协议信号。\n\n"
-            "作者: Wuuuu",
+            self, tr("about_title"), tr("about_text"),
         )
 
     # ----------------------------------------------------------------
@@ -885,12 +841,78 @@ class MainWindow(QMainWindow):
         return QIcon(p)
 
     # ----------------------------------------------------------------
+    # Retranslate UI on language switch
+    # ----------------------------------------------------------------
+    def _retranslate_ui(self):
+        self.setWindowTitle(tr("window_title"))
+
+        # Left panel
+        self.page_title_label.setText(tr("page_title"))
+        self.port_label.setText(tr("port_label"))
+        self.btn_refresh_port.setToolTip(tr("refresh_port_tooltip"))
+        self.btn_start.setText(tr("btn_start"))
+        self.btn_stop.setText(tr("btn_stop"))
+        self.btn_blackout.setText(tr("btn_blackout"))
+        self.btn_reset.setText(tr("btn_reset"))
+        self.master_label.setText(tr("master_label"))
+        self.master_value_label.setText(tr("master_value"))
+
+        # Status bar
+        if self.transmitter.isRunning():
+            self.status_label.setText(tr("status_sending", port=self.combo_port.currentText()))
+        elif self.btn_blackout.isChecked():
+            self.status_label.setText(tr("status_blackout"))
+        else:
+            self.status_label.setText(tr("status_ready"))
+
+        # Menus
+        self.menu_file.setTitle(tr("menu_file"))
+        self.menu_serial.setTitle(tr("menu_serial"))
+        self.menu_preset.setTitle(tr("menu_preset"))
+        self.menu_scene.setTitle(tr("menu_scene"))
+        self.menu_view.setTitle(tr("menu_view"))
+        self.menu_language.setTitle(tr("menu_language"))
+        self.menu_help.setTitle(tr("menu_help"))
+
+        # Actions
+        self.act_new_scene.setText(tr("act_new_scene"))
+        self.act_open_scene.setText(tr("act_open_scene"))
+        self.act_save_scene.setText(tr("act_save_scene"))
+        self.act_save_as.setText(tr("act_save_as"))
+        self.act_restart.setText(tr("act_restart"))
+        self.act_exit.setText(tr("act_exit"))
+        self.act_refresh_port.setText(tr("act_refresh_port"))
+        self.act_disconnect.setText(tr("act_disconnect"))
+        self.act_reset_all.setText(tr("act_reset_all"))
+        self.act_set_all_max.setText(tr("act_set_all_max"))
+        self.act_invert_all.setText(tr("act_invert_all"))
+        self.act_scene_library.setText(tr("act_scene_library"))
+        self.act_chaser.setText(tr("act_chaser"))
+        self.act_show_statusbar.setText(tr("act_show_statusbar"))
+        self.act_about_dmx.setText(tr("act_about_dmx"))
+        self.act_usage.setText(tr("act_usage"))
+        self.act_about.setText(tr("act_about"))
+        self.act_lang_zh.setText(tr("lang_chinese"))
+        self.act_lang_en.setText(tr("lang_english"))
+
+        # Language menu check state
+        is_zh = _lang_mgr().current_language == "zh"
+        self.act_lang_zh.setChecked(is_zh)
+        self.act_lang_en.setChecked(not is_zh)
+
+        # Page display
+        self._update_page_display()
+
+        # Port combo placeholder
+        if self.combo_port.count() == 1 and self.combo_port.itemData(0) is None:
+            self.combo_port.setItemText(0, tr("no_ports_available"))
+
+    # ----------------------------------------------------------------
     # Restart
     # ----------------------------------------------------------------
     def _restart_application(self):
         reply = QMessageBox.question(
-            self, "确认重启",
-            "确定要重启软件吗？\n未保存的场景数据将丢失。",
+            self, tr("confirm_restart_title"), tr("confirm_restart"),
             QMessageBox.Yes | QMessageBox.No,
         )
         if reply != QMessageBox.Yes:

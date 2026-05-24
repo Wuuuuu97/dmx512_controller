@@ -11,20 +11,24 @@ python main.py
 
 Build single-file exe:
 ```bash
-pyinstaller --onefile --windowed -y --icon icon.ico --name "DMX调试助手" main.py
+python build.py
 ```
-Output goes to `dist/DMX调试助手/DMX调试助手.exe`.
+Output goes to `build/DMX调试助手/DMX调试助手.exe`.
 
 ## Project Structure
 
 ```
 dmx512_controller/
 ├── main.py                  # Entry point
+├── build.py                 # PyInstaller single-file exe builder
 ├── CLAUDE.md                # This file — project overview for AI
-├── SPEC.md                  # Full specification (Chinese)
+├── build_icon.py            # Script to regenerate icon.ico
 ├── requirements.txt         # PyQt5>=5.15, pyserial>=3.5
 ├── icon.ico                 # Application icon
-├── build_icon.py            # Script to regenerate icon.ico
+├── README.md                # Bilingual (zh/en) user-facing readme
+├── docs/
+│   ├── CLAUDE.md            # Project overview for AI
+│   └── SPEC.md              # Full specification (Chinese)
 └── src/
     ├── __init__.py
     ├── dmx/
@@ -33,6 +37,9 @@ dmx512_controller/
     ├── engine/
     │   ├── __init__.py
     │   └── chaser.py        # Scene chaser engine (QThread with cross-fade)
+    ├── i18n/
+    │   ├── __init__.py
+    │   └── translations.py  # LanguageManager singleton, tr(), zh/en dicts
     └── ui/
         ├── __init__.py
         ├── main_window.py   # Main window: menu, left panel, page area, status bar
@@ -114,6 +121,18 @@ Slider → channel_widget → page_widget → main_window → transmitter (QThre
 - Auto-scan available ports (dropdown + refresh button)
 - Fixed 250000 baud, 8 data bits, 2 stop bits, no parity
 - Start/Stop buttons (port config disabled while transmitting)
+
+### Language Switching
+- Chinese/English toggle via 语言/Language menu (Ctrl+Shift+Z/E)
+- Signal-driven: `LanguageManager.language_changed` → `_retranslate_ui()`
+- Dict-based TRANSLATIONS (~70 keys × 2 languages)
+- Preference persisted to `scenes/settings.json`, restored on next launch
+- `tr(key, **kwargs)` fallback: English → Chinese → raw key (never crashes)
+
+### Restart
+- File → Restart (Ctrl+Shift+R)
+- Uses `QProcess.startDetached()` to launch a new process, then closes self
+- Flushes pending events (`QApplication.processEvents()`) before restart to release serial resources
 
 ### Presets (菜单 → 预设)
 - 全部归零 (Ctrl+R) — skip locked channels
