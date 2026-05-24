@@ -1,12 +1,13 @@
 import json
 import os
+import sys
 
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QStackedWidget, QPushButton, QLabel, QComboBox, QSlider,
     QMessageBox, QFileDialog, QAction, QInputDialog,
 )
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt, QRect, QProcess
 from PyQt5.QtGui import QFont, QPixmap, QPainter, QColor, QIcon
 
 import serial
@@ -325,6 +326,13 @@ class MainWindow(QMainWindow):
         act_save_as.setShortcut("Ctrl+Shift+S")
         act_save_as.triggered.connect(self._save_scene_as)
         menu_file.addAction(act_save_as)
+
+        menu_file.addSeparator()
+
+        act_restart = QAction("重启软件(&R)", self)
+        act_restart.setShortcut("Ctrl+Shift+R")
+        act_restart.triggered.connect(self._restart_application)
+        menu_file.addAction(act_restart)
 
         menu_file.addSeparator()
         act_exit = QAction("退出(&X)", self)
@@ -875,6 +883,32 @@ class MainWindow(QMainWindow):
         q.drawText(QRect(0, 0, 64, 64), Qt.AlignCenter, "DMX")
         q.end()
         return QIcon(p)
+
+    # ----------------------------------------------------------------
+    # Restart
+    # ----------------------------------------------------------------
+    def _restart_application(self):
+        reply = QMessageBox.question(
+            self, "确认重启",
+            "确定要重启软件吗？\n未保存的场景数据将丢失。",
+            QMessageBox.Yes | QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
+
+        self._stop_transmission()
+        # Flush pending events so resources are fully released
+        from PyQt5.QtWidgets import QApplication
+        QApplication.processEvents()
+
+        if getattr(sys, "frozen", False):
+            args = [sys.executable]
+        else:
+            root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            args = [sys.executable, os.path.join(root, "main.py")]
+
+        QProcess.startDetached(args[0], args[1:])
+        self.close()
 
     # ----------------------------------------------------------------
     # Window lifecycle

@@ -12,8 +12,8 @@ for p in ["build", "DMX调试助手.spec"]:
     elif os.path.exists(p):
         os.remove(p)
 
-# Build into DMX调试助手_build/DMX调试助手/DMX调试助手.exe
-dist_subdir = os.path.join(script_dir, "DMX调试助手_build", "DMX调试助手")
+# Build into build/DMX调试助手/DMX调试助手.exe
+dist_subdir = os.path.join(script_dir, "build", "DMX调试助手")
 args = [
     sys.executable, "-m", "PyInstaller",
     "--onefile",
