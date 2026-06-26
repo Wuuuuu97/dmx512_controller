@@ -4,7 +4,9 @@ __pycache__/
 *.so
 *.egg-info/
 dist/
-build/
+build/**
+!build/**/
+!build/**/*.exe
 *.spec
 
 # Scene data (user-generated)
@@ -25,6 +27,5 @@ Thumbs.db
 venv/
 .venv/
 
-# Build output
-*.exe
+# Build temp files (keep .exe output)
 *_build/
